@@ -324,6 +324,7 @@ fetch_connect(const char *host, int port, int af, int verbose)
 			goto next;
 		else if (err == 0) {
 			errno = ETIMEDOUT;
+			fetch_syserr();
 			goto next;
 		}
 		/* Connected. */
