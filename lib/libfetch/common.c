@@ -275,7 +275,8 @@ fetch_connect(const char *host, int port, int af, int verbose)
 	char pbuf[10];
 	const char *bindaddr;
 	struct addrinfo hints, *res, *res0;
-	int sd, err;
+	struct pollfd pfd;
+	int sd, deltams, err;
 
 	DEBUG(fprintf(stderr, "---> %s:%d\n", host, port));
 
@@ -299,18 +300,36 @@ fetch_connect(const char *host, int port, int af, int verbose)
 
 	/* try to connect */
 	for (sd = -1, res = res0; res; sd = -1, res = res->ai_next) {
-		if ((sd = socket(res->ai_family, res->ai_socktype,
-			 res->ai_protocol)) == -1)
+		if ((sd = socket(res->ai_family,
+		    res->ai_socktype | SOCK_NONBLOCK, res->ai_protocol)) == -1)
 			continue;
 		if (bindaddr != NULL && *bindaddr != '\0' &&
 		    fetch_bind(sd, res->ai_family, bindaddr) != 0) {
 			fetch_info("failed to bind to '%s'", bindaddr);
-			close(sd);
-			continue;
+			goto next;
 		}
-		if (connect(sd, res->ai_addr, res->ai_addrlen) == 0 &&
-		    fcntl(sd, F_SETFL, O_NONBLOCK) == 0)
-			break;
+		if (connect(sd, res->ai_addr, res->ai_addrlen) == -1 &&
+		    errno != EINPROGRESS)
+			goto next;
+		memset(&pfd, 0, sizeof pfd);
+		pfd.fd = sd;
+		pfd.events = POLLOUT | POLLERR;
+		deltams = INFTIM;
+		if (fetchTimeout > 0)
+			deltams = fetchTimeout * 1000;
+		errno = 0;
+		pfd.revents = 0;
+		err = poll(&pfd, 1, deltams); 
+		if (err < 0)
+			goto next;
+		else if (err == 0) {
+			errno = ETIMEDOUT;
+			goto next;
+		}
+		/* Connected. */
+		break;
+
+next:
 		close(sd);
 	}
 	freeaddrinfo(res0);
