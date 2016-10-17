@@ -1087,6 +1087,7 @@ find_table_entry(struct ip_fw_chain *ch, ip_fw3_opheader *op3,
 	struct table_config *tc;
 	struct table_algo *ta;
 	struct table_info *kti;
+	struct table_value *pval;
 	struct namedobj_instance *ni;
 	int error;
 	size_t sz;
@@ -1132,7 +1133,10 @@ find_table_entry(struct ip_fw_chain *ch, ip_fw3_opheader *op3,
 		return (ENOTSUP);
 
 	error = ta->find_tentry(tc->astate, kti, tent);
-
+	if (error == 0) {
+		pval = get_table_value(ch, tc, tent->v.kidx);
+		ipfw_export_table_value_v1(pval, &tent->v.value);
+	}
 	IPFW_UH_RUNLOCK(ch);
 
 	return (error);
@@ -2769,6 +2773,15 @@ classify_flow(ipfw_insn *cmd, uint16_t *puidx, uint8_t *ptype)
 	return (0);
 }
 
+static int
+classify_mac(ipfw_insn *cmd, uint16_t *puidx, uint8_t *ptype)
+{
+	*puidx = cmd->arg1;
+	*ptype = IPFW_TABLE_MAC2;
+
+	return (0);
+}
+
 static void
 update_arg1(ipfw_insn *cmd, uint16_t idx)
 {
@@ -2881,6 +2894,16 @@ static struct opcode_obj_rewrite opcodes[] = {
 		.opcode = O_IP_FLOW_LOOKUP,
 		.etlv = IPFW_TLV_TBL_NAME,
 		.classifier = classify_flow,
+		.update = update_arg1,
+		.find_byname = table_findbyname,
+		.find_bykidx = table_findbykidx,
+		.create_object = create_table_compat,
+		.manage_sets = table_manage_sets,
+	},
+	{
+		.opcode = O_MACADDR2_LOOKUP,
+		.etlv = IPFW_TLV_TBL_NAME,
+		.classifier = classify_mac,
 		.update = update_arg1,
 		.find_byname = table_findbyname,
 		.find_bykidx = table_findbykidx,
