@@ -112,7 +112,7 @@ SYSCTL_INT(_net_inet_ip, IPCTL_FORWARDING, forwarding, CTLFLAG_VNET | CTLFLAG_RW
 
 static VNET_DEFINE(int, ipfastforward) = 1;
 #define	V_ipfastforward		VNET(ipfastforward)
-SYSCTL_VNET_INT(_net_inet_ip, OID_AUTO, fastforwarding, CTLFLAG_RW,
+SYSCTL_INT(_net_inet_ip, OID_AUTO, fastforwarding, CTLFLAG_VNET | CTLFLAG_RW,
     &VNET_NAME(ipfastforward), 0, "Enable fast IP forwarding");
 
 static VNET_DEFINE(int, ipsendredirects) = 1;	/* XXX */
