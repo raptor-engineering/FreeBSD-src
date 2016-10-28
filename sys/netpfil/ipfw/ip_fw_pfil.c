@@ -390,14 +390,13 @@ ipfw_check_frame(void *arg, struct mbuf **m0, struct ifnet *dst, int dir,
 
 	case IP_FW_DUMMYNET:
 		ret = EACCES;
-		int dir;
 
 		if (ip_dn_io_ptr == NULL)
 			break; /* i.e. drop */
 
 		*m0 = NULL;
-		dir = PROTO_LAYER2 | (dst ? DIR_OUT : DIR_IN);
-		ip_dn_io_ptr(&m, dir, &args);
+		dir = (dir == PFIL_IN) ? DIR_IN : DIR_OUT;
+		ip_dn_io_ptr(&m, dir | PROTO_LAYER2, &args);
 		return 0;
 
 	default:
