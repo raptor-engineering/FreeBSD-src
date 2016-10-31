@@ -328,9 +328,9 @@ ipfw_check_frame(void *arg, struct mbuf **m0, struct ifnet *dst, int dir,
 		/* dummynet packet, already partially processed */
 		struct ipfw_rule_ref *r;
 
-		/* XXX can we free it after use ? */
 		mtag->m_tag_id = PACKET_TAG_NONE;
 		r = (struct ipfw_rule_ref *)(mtag + 1);
+		m_tag_delete(*m0, mtag);
 		if (r->info & IPFW_ONEPASS)
 			return (0);
 		args.rule = *r;
