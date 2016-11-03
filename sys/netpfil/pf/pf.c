@@ -6304,15 +6304,14 @@ pf_test(int dir, struct ifnet *ifp, struct mbuf **m0, struct inpcb *inp)
 		struct tcphdr	th;
 
 		pd.hdr.tcp = &th;
-		dnflow.f_id._flags = th.th_flags;
-		dnflow.f_id.dst_port = ntohs(th.th_dport);
-		dnflow.f_id.src_port = ntohs(th.th_sport);
-
 		if (!pf_pull_hdr(m, off, &th, sizeof(th),
 		    &action, &reason, AF_INET)) {
 			log = action != PF_PASS;
 			goto done;
 		}
+		dnflow.f_id._flags = th.th_flags;
+		dnflow.f_id.dst_port = ntohs(th.th_dport);
+		dnflow.f_id.src_port = ntohs(th.th_sport);
 		pd.p_len = pd.tot_len - off - (th.th_off << 2);
 		if ((th.th_flags & TH_ACK) && pd.p_len == 0)
 			pqid = 1;
@@ -6337,14 +6336,13 @@ pf_test(int dir, struct ifnet *ifp, struct mbuf **m0, struct inpcb *inp)
 		struct udphdr	uh;
 
 		pd.hdr.udp = &uh;
-		dnflow.f_id.dst_port = ntohs(uh.uh_dport);
-		dnflow.f_id.src_port = ntohs(uh.uh_sport);
-
 		if (!pf_pull_hdr(m, off, &uh, sizeof(uh),
 		    &action, &reason, AF_INET)) {
 			log = action != PF_PASS;
 			goto done;
 		}
+		dnflow.f_id.dst_port = ntohs(uh.uh_dport);
+		dnflow.f_id.src_port = ntohs(uh.uh_sport);
 		if (uh.uh_dport == 0 ||
 		    ntohs(uh.uh_ulen) > m->m_pkthdr.len - off ||
 		    ntohs(uh.uh_ulen) < sizeof(struct udphdr)) {
@@ -6856,15 +6854,14 @@ pf_test6(int dir, struct ifnet *ifp, struct mbuf **m0, struct inpcb *inp)
 		struct tcphdr	th;
 
 		pd.hdr.tcp = &th;
-		dnflow.f_id._flags = th.th_flags;
-		dnflow.f_id.dst_port = th.th_dport;
-		dnflow.f_id.src_port = th.th_sport;
-
 		if (!pf_pull_hdr(m, off, &th, sizeof(th),
 		    &action, &reason, AF_INET6)) {
 			log = action != PF_PASS;
 			goto done;
 		}
+		dnflow.f_id._flags = th.th_flags;
+		dnflow.f_id.dst_port = th.th_dport;
+		dnflow.f_id.src_port = th.th_sport;
 		pd.p_len = pd.tot_len - off - (th.th_off << 2);
 		action = pf_normalize_tcp(dir, kif, m, 0, off, h, &pd);
 		if (action == PF_DROP)
@@ -6887,14 +6884,13 @@ pf_test6(int dir, struct ifnet *ifp, struct mbuf **m0, struct inpcb *inp)
 		struct udphdr	uh;
 
 		pd.hdr.udp = &uh;
-		dnflow.f_id.dst_port = uh.uh_dport;
-		dnflow.f_id.src_port = uh.uh_sport;
-
 		if (!pf_pull_hdr(m, off, &uh, sizeof(uh),
 		    &action, &reason, AF_INET6)) {
 			log = action != PF_PASS;
 			goto done;
 		}
+		dnflow.f_id.dst_port = uh.uh_dport;
+		dnflow.f_id.src_port = uh.uh_sport;
 		if (uh.uh_dport == 0 ||
 		    ntohs(uh.uh_ulen) > m->m_pkthdr.len - off ||
 		    ntohs(uh.uh_ulen) < sizeof(struct udphdr)) {
