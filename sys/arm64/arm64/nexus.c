@@ -64,6 +64,7 @@ __FBSDID("$FreeBSD$");
 #include <machine/intr.h>
 
 #ifdef FDT
+#include <dev/ofw/ofw_bus_subr.h>
 #include <dev/ofw/openfirm.h>
 #include "ofw_bus_if.h"
 #endif
@@ -361,6 +362,8 @@ nexus_activate_resource(device_t bus, device_t child, int type, int rid,
 		rman_set_bustag(r, &memmap_bus);
 		rman_set_virtual(r, (void *)vaddr);
 		rman_set_bushandle(r, vaddr);
+	} else if (type == SYS_RES_IRQ) {
+		intr_activate_irq(child, r);
 	}
 	return (0);
 }
@@ -394,13 +397,17 @@ nexus_deactivate_resource(device_t bus, device_t child, int type, int rid,
 	bus_size_t psize;
 	bus_space_handle_t vaddr;
 
-	psize = (bus_size_t)rman_get_size(r);
-	vaddr = rman_get_bushandle(r);
+	if (type == SYS_RES_MEMORY || type == SYS_RES_IOPORT) {
+		psize = (bus_size_t)rman_get_size(r);
+		vaddr = rman_get_bushandle(r);
 
-	if (vaddr != 0) {
-		bus_space_unmap(&memmap_bus, vaddr, psize);
-		rman_set_virtual(r, NULL);
-		rman_set_bushandle(r, 0);
+		if (vaddr != 0) {
+			bus_space_unmap(&memmap_bus, vaddr, psize);
+			rman_set_virtual(r, NULL);
+			rman_set_bushandle(r, 0);
+		}
+	} else if (type == SYS_RES_IRQ) {
+		intr_deactivate_irq(child, r);
 	}
 
 	return (rman_deactivate_resource(r));
@@ -447,22 +454,18 @@ static int
 nexus_ofw_map_intr(device_t dev, device_t child, phandle_t iparent, int icells,
     pcell_t *intr)
 {
-#ifdef INTRNG
-	return (INTR_IRQ_INVALID);
-#else
-	int irq;
+	u_int irq;
+	struct intr_map_data_fdt *fdt_data;
+	size_t len;
 
-	if (icells == 3) {
-		irq = intr[1];
-		if (intr[0] == 0)
-			irq += 32; /* SPI */
-		else
-			irq += 16; /* PPI */
-	} else
-		irq = intr[0];
-
+	len = sizeof(*fdt_data) + icells * sizeof(pcell_t);
+	fdt_data = (struct intr_map_data_fdt *)intr_alloc_map_data(
+	    INTR_MAP_DATA_FDT, len, M_WAITOK | M_ZERO);
+	fdt_data->iparent = iparent;
+	fdt_data->ncells = icells;
+	memcpy(fdt_data->cells, intr, icells * sizeof(pcell_t));
+	irq = intr_map_irq(NULL, iparent, (struct intr_map_data *)fdt_data);
 	return (irq);
-#endif
 }
 #endif
 
