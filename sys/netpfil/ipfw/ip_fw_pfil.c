@@ -318,7 +318,7 @@ ipfw_check_frame(void *arg, struct mbuf **m0, struct ifnet *ifp, int dir,
 	struct ip_fw_args args;
 	struct m_tag *mtag;
 
-	/* fetch start point from rule, if any.  remove tag if present. */
+	/* fetch start point from rule, if any.  remove the tag if present. */
 	mtag = m_tag_locate(*m0, MTAG_IPFW_RULE, 0, NULL);
 	if (mtag == NULL) {
 		args.rule.slot = 0;
