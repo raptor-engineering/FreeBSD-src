@@ -2883,6 +2883,7 @@ cpsw_getvgroup(device_t dev, etherswitch_vlangroup_t *vg)
 	if (vg->es_vlangroup >= CPSW_VLANS)
 		return (EINVAL);
 
+	vg->es_vid = 0;
 	vid = cpsw_vgroups[vg->es_vlangroup].vid;
 	if (vid == -1)
 		return (0);
