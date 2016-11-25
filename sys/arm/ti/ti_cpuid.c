@@ -238,7 +238,7 @@ am335x_get_revision(void)
 	}
 
 	memset(ti_cpu_model, 0, sizeof(ti_cpu_model));
-	printf(ti_cpu_model, sizeof(ti_cpu_model) - 1),
+	printf(ti_cpu_model, sizeof(ti_cpu_model) - 1,
 	    "Texas Instruments AM335%c Processor, Revision ES1.%u",
 		cpu_last_char, AM335X_DEVREV(chip_revision));
 	printf("%s\n", ti_cpu_model);
