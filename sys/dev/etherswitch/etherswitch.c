@@ -44,8 +44,6 @@
 
 #include "etherswitch_if.h"
 
-#define BUFSIZE 1024
-
 struct etherswitch_softc {
 	device_t sc_dev;
 	struct cdev *sc_devnode;
