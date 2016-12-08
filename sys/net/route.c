@@ -417,7 +417,7 @@ rtalloc_ign_fib(struct route *ro, u_long ignore, u_int fibnum)
 		RTFREE(rt);
 		ro->ro_rt = NULL;
 	}
-	ro->ro_rt = rtalloc1_fib(&ro->ro_dst, 1, ignore, fibnum);
+	ro->ro_rt = rtalloc1_fib(&ro->ro_dst, 1, ignore, fibnum, 0);
 	if (ro->ro_rt)
 		RT_UNLOCK(ro->ro_rt);
 }
@@ -432,12 +432,12 @@ struct rtentry *
 rtalloc1(struct sockaddr *dst, int report, u_long ignflags)
 {
 
-	return (rtalloc1_fib(dst, report, ignflags, RT_DEFAULT_FIB));
+	return (rtalloc1_fib(dst, report, ignflags, RT_DEFAULT_FIB, 0));
 }
 
 struct rtentry *
-rtalloc1_fib(struct sockaddr *dst, int report, u_long ignflags,
-		    u_int fibnum)
+rtalloc1_fib(struct sockaddr *dst, int report, u_long ignflags, u_int fibnum,
+	u_int flags)
 {
 	struct rib_head *rh;
 	struct radix_node *rn;
@@ -454,16 +454,18 @@ rtalloc1_fib(struct sockaddr *dst, int report, u_long ignflags,
 	/*
 	 * Look up the address in the table for that Address Family
 	 */
-	RIB_RLOCK(rh);
+	if ((flags & RTF_RNH_LOCKED) == 0)
+		RIB_RLOCK(rh);
 	rn = rh->rnh_matchaddr(dst, &rh->head);
 	if (rn && ((rn->rn_flags & RNF_ROOT) == 0)) {
 		newrt = RNTORT(rn);
 		RT_LOCK(newrt);
 		RT_ADDREF(newrt);
-		RIB_RUNLOCK(rh);
+		if ((flags & RTF_RNH_LOCKED) == 0)
+			RIB_RUNLOCK(rh);
 		return (newrt);
 
-	} else
+	} else if ((flags & RTF_RNH_LOCKED) == 0)
 		RIB_RUNLOCK(rh);
 	
 	/*
@@ -600,7 +602,7 @@ rtredirect_fib(struct sockaddr *dst,
 		error = ENETUNREACH;
 		goto out;
 	}
-	rt = rtalloc1_fib(dst, 0, 0UL, fibnum);	/* NB: rt is locked */
+	rt = rtalloc1_fib(dst, 0, 0UL, fibnum, 0);	/* NB: rt is locked */
 	/*
 	 * If the redirect isn't from our current router for this dst,
 	 * it's either old or wrong.  If it redirects us to ourselves,
@@ -749,7 +751,9 @@ ifa_ifwithroute(int flags, const struct sockaddr *dst, struct sockaddr *gateway,
 	if (ifa == NULL)
 		ifa = ifa_ifwithnet(gateway, 0, fibnum);
 	if (ifa == NULL) {
-		struct rtentry *rt = rtalloc1_fib(gateway, 0, 0, fibnum);
+		struct rtentry *rt;
+
+		rt = rtalloc1_fib(gateway, 0, 0, fibnum, RTF_RNH_LOCKED);
 		if (rt == NULL)
 			return (NULL);
 		/*

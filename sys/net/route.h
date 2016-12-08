@@ -482,7 +482,7 @@ int	 rtinit(struct ifaddr *, int, int);
  */
 int	 rt_getifa_fib(struct rt_addrinfo *, u_int fibnum);
 void	 rtalloc_ign_fib(struct route *ro, u_long ignflags, u_int fibnum);
-struct rtentry *rtalloc1_fib(struct sockaddr *, int, u_long, u_int);
+struct rtentry *rtalloc1_fib(struct sockaddr *, int, u_long, u_int, u_int);
 int	 rtioctl_fib(u_long, caddr_t, u_int);
 void	 rtredirect_fib(struct sockaddr *, struct sockaddr *,
 	    struct sockaddr *, int, struct sockaddr *, u_int);

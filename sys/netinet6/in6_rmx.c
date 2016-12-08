@@ -280,5 +280,5 @@ struct rtentry *
 in6_rtalloc1(struct sockaddr *dst, int report, u_long ignflags, u_int fibnum)
 {
 
-	return (rtalloc1_fib(dst, report, ignflags, fibnum));
+	return (rtalloc1_fib(dst, report, ignflags, fibnum, 0));
 }
