@@ -68,8 +68,8 @@ am335x_scm_temp_sysctl(SYSCTL_HANDLER_ARGS)
 	if ((reg & SCM_BGAP_EOCZ) == 0) {
 		sc->sc_last_temp =
 		    (reg >> SCM_BGAP_TEMP_SHIFT) & SCM_BGAP_TEMP_MASK;
-		if (sc->sc_last_temp > 76)
-			sc->sc_last_temp = 76;
+		if (bootverbose && sc->sc_last_temp == 127)
+			printf("%s: bandgap reg: %#x\n", __func__, reg);
 		sc->sc_last_temp *= 10;
 	}
 	temp = sc->sc_last_temp + TZ_ZEROC;
