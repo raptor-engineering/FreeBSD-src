@@ -61,7 +61,6 @@ am335x_scm_reset_sysctl(SYSCTL_HANDLER_ARGS)
 
 	reset = 0;
 	sysctl_handle_int(oidp, &reset, 0, req);
-
 	if (!reset)
 		return (0);
 
@@ -82,6 +81,7 @@ am335x_scm_reset_sysctl(SYSCTL_HANDLER_ARGS)
 	reg = SCM_BGAP_CLRZ | SCM_BGAP_CONTCONV | SCM_BGAP_SOC;
 	ti_scm_reg_write_4(SCM_BGAP_CTRL, reg);
 
+	return (0);
 }
 
 static int
