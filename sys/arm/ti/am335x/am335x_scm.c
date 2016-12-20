@@ -43,6 +43,7 @@ __FBSDID("$FreeBSD$");
 #define	TZ_ZEROC	2731
 
 struct am335x_scm_softc {
+	int			sc_debug;
 	int			sc_last_temp;
 	struct sysctl_oid	*sc_temp_oid;
 };
@@ -68,7 +69,7 @@ am335x_scm_temp_sysctl(SYSCTL_HANDLER_ARGS)
 	if ((reg & SCM_BGAP_EOCZ) == 0) {
 		sc->sc_last_temp =
 		    (reg >> SCM_BGAP_TEMP_SHIFT) & SCM_BGAP_TEMP_MASK;
-		if (bootverbose && sc->sc_last_temp == 127)
+		if (sc->sc_debug)
 			printf("%s: bandgap reg: %#x\n", __func__, reg);
 		sc->sc_last_temp *= 10;
 	}
@@ -128,6 +129,8 @@ am335x_scm_attach(device_t dev)
 	sc->sc_temp_oid = SYSCTL_ADD_PROC(ctx, tree, OID_AUTO,
 	    "temperature", CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_MPSAFE,
 	    dev, 0, am335x_scm_temp_sysctl, "IK", "Current temperature");
+	SYSCTL_ADD_INT(ctx, tree, OID_AUTO, "debug", CTLFLAG_RW,
+	    &sc->sc_debug, 0, "Enable debug output");
 
 	return (0);
 }
