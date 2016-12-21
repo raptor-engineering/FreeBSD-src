@@ -67,12 +67,12 @@ am335x_scm_reset_sysctl(SYSCTL_HANDLER_ARGS)
 	printf("%s: reset\n", __func__);
 
 	/* Set ADC to continous mode, clear output reset. */
-	reg = (1 << 5) | (1 << 6);
+	reg = 0;
 	ti_scm_reg_write_4(SCM_BGAP_CTRL, reg);
 	/* Flush write. */
 	ti_scm_reg_read_4(SCM_BGAP_CTRL, &reg);
 	DELAY(1000);
-	reg = SCM_BGAP_CLRZ | SCM_BGAP_CONTCONV;
+	reg = SCM_BGAP_CONTCONV;
 	ti_scm_reg_write_4(SCM_BGAP_CTRL, reg);
 	/* Flush write. */
 	ti_scm_reg_read_4(SCM_BGAP_CTRL, &reg);
@@ -167,7 +167,7 @@ am335x_scm_attach(device_t dev)
 	    dev, 0, am335x_scm_temp_sysctl, "IK", "Current temperature");
 	SYSCTL_ADD_PROC(ctx, tree, OID_AUTO,
 	    "reset", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE,
-	    dev, 0, am335x_scm_reset_sysctl, "IK", "Reset temperature sensor");
+	    dev, 0, am335x_scm_reset_sysctl, "I", "Reset temperature sensor");
 	SYSCTL_ADD_INT(ctx, tree, OID_AUTO, "debug", CTLFLAG_RW,
 	    &sc->sc_debug, 0, "Enable debug output");
 
