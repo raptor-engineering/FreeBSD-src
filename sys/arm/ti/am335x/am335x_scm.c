@@ -43,46 +43,9 @@ __FBSDID("$FreeBSD$");
 #define	TZ_ZEROC	2731
 
 struct am335x_scm_softc {
-	int			sc_debug;
 	int			sc_last_temp;
 	struct sysctl_oid	*sc_temp_oid;
 };
-
-static int
-am335x_scm_reset_sysctl(SYSCTL_HANDLER_ARGS)
-{
-	device_t dev;
-	int reset;
-	struct am335x_scm_softc *sc;
-	uint32_t reg;
-
-	dev = (device_t)arg1;
-	sc = device_get_softc(dev);
-
-	reset = 0;
-	sysctl_handle_int(oidp, &reset, 0, req);
-	if (!reset)
-		return (0);
-
-	printf("%s: reset\n", __func__);
-
-	/* Set ADC to continous mode, clear output reset. */
-	reg = 0;
-	ti_scm_reg_write_4(SCM_BGAP_CTRL, reg);
-	/* Flush write. */
-	ti_scm_reg_read_4(SCM_BGAP_CTRL, &reg);
-	DELAY(1000);
-	reg = SCM_BGAP_CONTCONV;
-	ti_scm_reg_write_4(SCM_BGAP_CTRL, reg);
-	/* Flush write. */
-	ti_scm_reg_read_4(SCM_BGAP_CTRL, &reg);
-	DELAY(1000);
-	/* Start the ADC conversion. */
-	reg = SCM_BGAP_CLRZ | SCM_BGAP_CONTCONV | SCM_BGAP_SOC;
-	ti_scm_reg_write_4(SCM_BGAP_CTRL, reg);
-
-	return (0);
-}
 
 static int
 am335x_scm_temp_sysctl(SYSCTL_HANDLER_ARGS)
@@ -105,8 +68,6 @@ am335x_scm_temp_sysctl(SYSCTL_HANDLER_ARGS)
 	if ((reg & SCM_BGAP_EOCZ) == 0) {
 		sc->sc_last_temp =
 		    (reg >> SCM_BGAP_TEMP_SHIFT) & SCM_BGAP_TEMP_MASK;
-		if (sc->sc_debug)
-			printf("%s: bandgap reg: %#x\n", __func__, reg);
 		sc->sc_last_temp *= 10;
 	}
 	temp = sc->sc_last_temp + TZ_ZEROC;
@@ -149,11 +110,14 @@ am335x_scm_attach(device_t dev)
 	struct sysctl_oid_list *tree;
 	uint32_t reg;
 
-	/* Set ADC to continous mode, clear output reset. */
-	reg = SCM_BGAP_CLRZ | SCM_BGAP_CONTCONV;
-	ti_scm_reg_write_4(SCM_BGAP_CTRL, reg);
-	/* Flush write. */
+	/* Reset the digital outputs. */
+	ti_scm_reg_write_4(SCM_BGAP_CTRL, 0);
 	ti_scm_reg_read_4(SCM_BGAP_CTRL, &reg);
+	DELAY(500);
+	/* Set continous mode. */
+	ti_scm_reg_write_4(SCM_BGAP_CTRL, SCM_BGAP_CONTCONV);
+	ti_scm_reg_read_4(SCM_BGAP_CTRL, &reg);
+	DELAY(500);
 	/* Start the ADC conversion. */
 	reg = SCM_BGAP_CLRZ | SCM_BGAP_CONTCONV | SCM_BGAP_SOC;
 	ti_scm_reg_write_4(SCM_BGAP_CTRL, reg);
@@ -165,11 +129,6 @@ am335x_scm_attach(device_t dev)
 	sc->sc_temp_oid = SYSCTL_ADD_PROC(ctx, tree, OID_AUTO,
 	    "temperature", CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_MPSAFE,
 	    dev, 0, am335x_scm_temp_sysctl, "IK", "Current temperature");
-	SYSCTL_ADD_PROC(ctx, tree, OID_AUTO,
-	    "reset", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE,
-	    dev, 0, am335x_scm_reset_sysctl, "I", "Reset temperature sensor");
-	SYSCTL_ADD_INT(ctx, tree, OID_AUTO, "debug", CTLFLAG_RW,
-	    &sc->sc_debug, 0, "Enable debug output");
 
 	return (0);
 }
