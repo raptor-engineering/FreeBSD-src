@@ -5949,7 +5949,7 @@ pf_route6(struct mbuf **m, struct pf_rule *r, int dir, struct ifnet *oifp,
 			PACKET_UNDO_NAT(m0, pd, ip_off, s, dir);
 		}
 
-		if (pf_test6(PF_FWD, ifp, &m0, NULL) != PF_PASS)
+		if (pf_test6(PF_OUT, ifp, &m0, NULL) != PF_PASS)
 			goto bad;
 		else if (m0 == NULL)
 			goto done;
