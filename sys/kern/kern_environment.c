@@ -279,16 +279,17 @@ init_dynamic_kenv(void *data __unused)
 			cpnext = kernenv_next(cp);
 			len = strlen(cp) + 1;
 			if (len > KENV_MNAMELEN + 1 + KENV_MVALLEN + 1) {
-				printf(
-				"WARNING: too long kenv string, ignoring %s\n",
-				    cp);
+				if (bootverbose)
+					printf(
+					"WARNING: too long kenv string, ignoring %s\n",
+					    cp);
 				continue;
 			}
 			if (i < KENV_SIZE) {
 				kenvp[i] = malloc(len, M_KENV, M_WAITOK);
 				strcpy(kenvp[i++], cp);
 				memset(cp, 0, strlen(cp));
-			} else
+			} else if (bootverbose)
 				printf(
 				"WARNING: too many kenv strings, ignoring %s\n",
 				    cp);
