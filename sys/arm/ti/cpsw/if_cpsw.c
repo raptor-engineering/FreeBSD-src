@@ -1629,19 +1629,33 @@ cpsw_rx_dequeue(struct cpsw_softc *sc)
 		    ("patcket received with invalid port: %d", port));
 		psc = device_get_softc(sc->port[port].dev);
 
+		/* XXX - loos */
+		if (bootverbose)
+			printf("%s: %s: buflen: %d pktlen: %d flags: %#x\n",
+			    __func__, psc->ifp->if_xname, bd.buflen, bd.pktlen, bd.flags);
+
 		/* Set up mbuf */
 		/* TODO: track SOP/EOP bits to assemble a full mbuf
 		   out of received fragments. */
 		slot->mbuf->m_data += bd.bufoff;
-		slot->mbuf->m_len = bd.pktlen - 4;
-		slot->mbuf->m_pkthdr.len = bd.pktlen - 4;
-		slot->mbuf->m_flags |= M_PKTHDR;
-		slot->mbuf->m_pkthdr.rcvif = psc->ifp;
+		slot->mbuf->m_len = bd.buflen;
+		if (bd.flags & CPDMA_BD_SOP) {
+			slot->mbuf->m_pkthdr.len = bd.pktlen;
+			slot->mbuf->m_pkthdr.rcvif = psc->ifp;
+			slot->mbuf->m_flags |= M_PKTHDR;
+		}
+		slot->mbuf->m_next = NULL;
 		slot->mbuf->m_nextpkt = NULL;
+		if (bd.flags & CPDMA_BD_PASSED_CRC) {
+			slot->mbuf->m_len -= ETHER_CRC_LEN;
+			if (bd.flags & CPDMA_BD_SOP)
+				slot->mbuf->m_pkthdr.len -= ETHER_CRC_LEN;
+		}
 
 		if ((psc->ifp->if_capenable & IFCAP_RXCSUM) != 0) {
 			/* check for valid CRC by looking into pkt_err[5:4] */
-			if ((bd.flags & CPDMA_BD_PKT_ERR_MASK) == 0) {
+			if ((bd.flags & (CPDMA_BD_SOP |
+			    CPDMA_BD_PKT_ERR_MASK)) == CPDMA_BD_SOP) {
 				slot->mbuf->m_pkthdr.csum_flags |= CSUM_IP_CHECKED;
 				slot->mbuf->m_pkthdr.csum_flags |= CSUM_IP_VALID;
 				slot->mbuf->m_pkthdr.csum_data = 0xffff;
@@ -1649,14 +1663,28 @@ cpsw_rx_dequeue(struct cpsw_softc *sc)
 		}
 
 		/* Add mbuf to packet list to be returned. */
-		if (mb_tail) {
+		if (mb_tail != NULL &&
+		    (bd.flags & (CPDMA_BD_SOP | CPDMA_BD_EOP)) ==
+		    (CPDMA_BD_SOP | CPDMA_BD_EOP)) {
 			mb_tail->m_nextpkt = slot->mbuf;
+		} else if (mb_tail != NULL) {
+			mb_tail->m_next = slot->mbuf;
+		} else if (mb_tail == NULL &&
+		    (bd.flags & (CPDMA_BD_SOP | CPDMA_BD_EOP)) !=
+		    (CPDMA_BD_SOP | CPDMA_BD_EOP)) {
+			if (bootverbose)
+				printf(
+				    "%s: %s: discanding fragment packet w/o header\n",
+				    __func__, psc->ifp->if_xname);
+			m_freem(slot->mbuf);
+			slot->mbuf = NULL;
+			continue;
 		} else {
 			mb_head = slot->mbuf;
 		}
 		mb_tail = slot->mbuf;
 		slot->mbuf = NULL;
-		if (sc->rx_batch > 0 && sc->rx_batch == removed)
+		if (sc->rx_batch > 0 && sc->rx_batch >= removed)
 			break;
 	}
 
