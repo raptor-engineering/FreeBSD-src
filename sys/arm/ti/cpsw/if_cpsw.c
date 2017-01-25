@@ -1396,6 +1396,16 @@ cpswp_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 	ifr = (struct ifreq *)data;
 
 	switch (command) {
+	case SIOCSIFCAP:
+		changed = ifp->if_capenable ^ ifr->ifr_reqcap;
+		if (changed & IFCAP_HWCSUM) {
+			if ((ifr->ifr_reqcap & changed) & IFCAP_HWCSUM)
+				ifp->if_capenable |= IFCAP_HWCSUM;
+			else
+				ifp->if_capenable &= ~IFCAP_HWCSUM;
+		}
+		error = 0;
+		break;
 	case SIOCSIFFLAGS:
 		CPSW_PORT_LOCK(sc);
 		if (ifp->if_flags & IFF_UP) {
@@ -1629,11 +1639,6 @@ cpsw_rx_dequeue(struct cpsw_softc *sc)
 		    ("patcket received with invalid port: %d", port));
 		psc = device_get_softc(sc->port[port].dev);
 
-		/* XXX - loos */
-		if (bootverbose)
-			printf("%s: %s: buflen: %d pktlen: %d flags: %#x\n",
-			    __func__, psc->ifp->if_xname, bd.buflen, bd.pktlen, bd.flags);
-
 		/* Set up mbuf */
 		/* TODO: track SOP/EOP bits to assemble a full mbuf
 		   out of received fragments. */
@@ -1646,16 +1651,15 @@ cpsw_rx_dequeue(struct cpsw_softc *sc)
 		}
 		slot->mbuf->m_next = NULL;
 		slot->mbuf->m_nextpkt = NULL;
-		if (bd.flags & CPDMA_BD_PASSED_CRC) {
-			slot->mbuf->m_len -= ETHER_CRC_LEN;
-			if (bd.flags & CPDMA_BD_SOP)
-				slot->mbuf->m_pkthdr.len -= ETHER_CRC_LEN;
-		}
+
+		if (bd.flags & CPDMA_BD_PASS_CRC)
+			m_adj(slot->mbuf, -ETHER_CRC_LEN);
 
 		if ((psc->ifp->if_capenable & IFCAP_RXCSUM) != 0) {
 			/* check for valid CRC by looking into pkt_err[5:4] */
-			if ((bd.flags & (CPDMA_BD_SOP |
-			    CPDMA_BD_PKT_ERR_MASK)) == CPDMA_BD_SOP) {
+			if ((bd.flags &
+			    (CPDMA_BD_SOP | CPDMA_BD_PKT_ERR_MASK)) ==
+			    CPDMA_BD_SOP) {
 				slot->mbuf->m_pkthdr.csum_flags |= CSUM_IP_CHECKED;
 				slot->mbuf->m_pkthdr.csum_flags |= CSUM_IP_VALID;
 				slot->mbuf->m_pkthdr.csum_data = 0xffff;
