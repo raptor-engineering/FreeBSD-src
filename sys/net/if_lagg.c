@@ -539,8 +539,11 @@ lagg_clone_destroy(struct ifnet *ifp)
 	EVENTHANDLER_DEREGISTER(vlan_unconfig, sc->vlan_detach);
 
 	/* Shutdown and remove lagg ports */
-	while ((lp = SLIST_FIRST(&sc->sc_ports)) != NULL)
+	while ((lp = SLIST_FIRST(&sc->sc_ports)) != NULL) {
+		lp->lp_detaching = 1;
 		lagg_port_destroy(lp, 1);
+	}
+	taskqueue_drain(taskqueue_swi, &sc->sc_lladdr_task);
 	/* Unhook the aggregation protocol */
 	lagg_proto_detach(sc);
 	LAGG_UNLOCK_ASSERT(sc);
@@ -553,7 +556,6 @@ lagg_clone_destroy(struct ifnet *ifp)
 	SLIST_REMOVE(&V_lagg_list, sc, lagg_softc, sc_entries);
 	LAGG_LIST_UNLOCK();
 
-	taskqueue_drain(taskqueue_swi, &sc->sc_lladdr_task);
 	LAGG_LOCK_DESTROY(sc);
 	free(sc, M_DEVBUF);
 }
@@ -924,7 +926,8 @@ lagg_port_destroy(struct lagg_port *lp, int rundelport)
 			bcopy(lp0->lp_lladdr,
 			    lladdr, ETHER_ADDR_LEN);
 		}
-		lagg_lladdr(sc, lladdr);
+		if (!lp->lp_detaching)
+			lagg_lladdr(sc, lladdr);
 
 		/* Mark lp0 as new primary */
 		sc->sc_primary = lp0;
