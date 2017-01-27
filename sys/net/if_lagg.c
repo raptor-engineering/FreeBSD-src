@@ -543,11 +543,11 @@ lagg_clone_destroy(struct ifnet *ifp)
 		lp->lp_detaching = 1;
 		lagg_port_destroy(lp, 1);
 	}
-	taskqueue_drain(taskqueue_swi, &sc->sc_lladdr_task);
 	/* Unhook the aggregation protocol */
 	lagg_proto_detach(sc);
 	LAGG_UNLOCK_ASSERT(sc);
 
+	taskqueue_drain(taskqueue_swi, &sc->sc_lladdr_task);
 	ifmedia_removeall(&sc->sc_media);
 	ether_ifdetach(ifp);
 	if_free(ifp);
