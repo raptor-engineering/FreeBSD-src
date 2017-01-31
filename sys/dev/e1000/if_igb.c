@@ -801,19 +801,21 @@ igb_resume(device_t dev)
 
 	if ((ifp->if_flags & IFF_UP) &&
 	    (ifp->if_drv_flags & IFF_DRV_RUNNING) && adapter->link_active) {
+#ifndef IGB_LEGACY_TX
 		for (int i = 0; i < adapter->num_queues; i++, txr++) {
 			IGB_TX_LOCK(txr);
-#ifndef IGB_LEGACY_TX
 			/* Process the stack queue only if not depleted */
 			if (((txr->queue_status & IGB_QUEUE_DEPLETED) == 0) &&
 			    !drbr_empty(ifp, txr->br))
 				igb_mq_start_locked(ifp, txr);
-#else
-			if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
-				igb_start_locked(txr, ifp);
-#endif
 			IGB_TX_UNLOCK(txr);
 		}
+#else
+		IGB_TX_LOCK(txr);
+		if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
+			igb_start_locked(txr, ifp);
+		IGB_TX_UNLOCK(txr);
+#endif
 	}
 	IGB_CORE_UNLOCK(adapter);
 
@@ -1411,11 +1413,12 @@ igb_handle_que(void *context, int pending)
 		if (((txr->queue_status & IGB_QUEUE_DEPLETED) == 0) &&
 		    !drbr_empty(ifp, txr->br))
 			igb_mq_start_locked(ifp, txr);
-#else
-		if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
-			igb_start_locked(txr, ifp);
-#endif
 		IGB_TX_UNLOCK(txr);
+#else
+		IGB_TX_UNLOCK(txr);
+		if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
+			igb_start(ifp);
+#endif
 		/* Do we need another? */
 		if (more) {
 			taskqueue_enqueue(que->tq, &que->que_task);
@@ -1455,19 +1458,21 @@ igb_handle_link_locked(struct adapter *adapter)
 	adapter->hw.mac.get_link_status = 1;
 	igb_update_link_status(adapter);
 	if ((ifp->if_drv_flags & IFF_DRV_RUNNING) && adapter->link_active) {
+#ifndef IGB_LEGACY_TX
 		for (int i = 0; i < adapter->num_queues; i++, txr++) {
 			IGB_TX_LOCK(txr);
-#ifndef IGB_LEGACY_TX
 			/* Process the stack queue only if not depleted */
 			if (((txr->queue_status & IGB_QUEUE_DEPLETED) == 0) &&
 			    !drbr_empty(ifp, txr->br))
 				igb_mq_start_locked(ifp, txr);
-#else
-			if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
-				igb_start_locked(txr, ifp);
-#endif
 			IGB_TX_UNLOCK(txr);
 		}
+#else
+		IGB_TX_LOCK(txr);
+		if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
+			igb_start_locked(txr, ifp);
+		IGB_TX_UNLOCK(txr);
+#endif
 	}
 }
 
@@ -1549,6 +1554,7 @@ igb_poll(struct ifnet *ifp, enum poll_cmd cmd, int count)
 	}
 	IGB_CORE_UNLOCK(adapter);
 
+#ifndef IGB_LEGACY_TX
 	for (int i = 0; i < adapter->num_queues; i++) {
 		que = &adapter->queues[i];
 		txr = que->txr;
@@ -1559,15 +1565,18 @@ igb_poll(struct ifnet *ifp, enum poll_cmd cmd, int count)
 		do {
 			more = igb_txeof(txr);
 		} while (loop-- && more);
-#ifndef IGB_LEGACY_TX
 		if (!drbr_empty(ifp, txr->br))
 			igb_mq_start_locked(ifp, txr);
-#else
-		if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
-			igb_start_locked(txr, ifp);
-#endif
 		IGB_TX_UNLOCK(txr);
 	}
+#else
+	que = &adapter->queues[0];
+	txr = que->txr;
+	IGB_TX_LOCK(txr);
+	if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
+		igb_start_locked(txr, ifp);
+	IGB_TX_UNLOCK(txr);
+#endif
 
 	return POLL_RETURN_COUNT(rx_done);
 }
@@ -1603,11 +1612,12 @@ igb_msix_que(void *arg)
 	if (((txr->queue_status & IGB_QUEUE_DEPLETED) == 0) &&
 	    !drbr_empty(ifp, txr->br))
 		igb_mq_start_locked(ifp, txr);
-#else
-	if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
-		igb_start_locked(txr, ifp);
-#endif
 	IGB_TX_UNLOCK(txr);
+#else
+	IGB_TX_UNLOCK(txr);
+	if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
+		igb_start(ifp);
+#endif
 
 	more_rx = igb_rxeof(que, adapter->rx_process_limit, NULL);
 
