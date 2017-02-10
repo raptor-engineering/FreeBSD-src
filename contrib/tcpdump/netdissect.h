@@ -434,6 +434,7 @@ extern u_int netanalyzer_transparent_if_print IF_PRINTER_ARGS;
 extern u_int nflog_if_print IF_PRINTER_ARGS;
 extern u_int null_if_print IF_PRINTER_ARGS;
 extern u_int pflog_if_print IF_PRINTER_ARGS;
+extern u_int pfsync_if_print IF_PRINTER_ARGS;
 extern u_int pktap_if_print IF_PRINTER_ARGS;
 extern u_int ppi_if_print IF_PRINTER_ARGS;
 extern u_int ppp_bsdos_if_print IF_PRINTER_ARGS;
