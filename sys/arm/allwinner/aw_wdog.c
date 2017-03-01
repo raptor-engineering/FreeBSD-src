@@ -222,7 +222,7 @@ aw_wdog_watchdog_fn(void *private, u_int cmd, int *error)
 }
 
 void
-aw_wdog_watchdog_reset()
+aw_wdog_watchdog_reset(void)
 {
 
 	if (aw_wdog_sc == NULL) {
