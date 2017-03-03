@@ -382,7 +382,7 @@ ipsec4_common_input_cb(struct mbuf *m, struct secasvar *sav, int skip,
 			goto bad;
 		}
 		/* enc0: strip outer IPv4 header */
-		m_striphdr(m, skip, ip->ip_hl << 2);
+		m_striphdr(m, 0, ip->ip_hl << 2);
 
 #ifdef notyet
 		/* XXX PROXY address isn't recorded in SAH */
@@ -423,7 +423,7 @@ ipsec4_common_input_cb(struct mbuf *m, struct secasvar *sav, int skip,
 			goto bad;
 		}
 		/* enc0: strip IPv4 header, keep IPv6 header only */
-		m_striphdr(m, skip, ip->ip_hl << 2);
+		m_striphdr(m, 0, ip->ip_hl << 2);
 #ifdef notyet 
 		/*
 		 * Check that the inner source address is the same as
