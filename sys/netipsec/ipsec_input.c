@@ -348,7 +348,7 @@ ipsec4_common_input_cb(struct mbuf *m, struct secasvar *sav, int skip,
 		 * XXXGL: do we need this entire block?
 		 */
 		if (m->m_len < sizeof(struct ip) &&
-		    (m = m_pullup(m, sizeoof(struct ip))) == NULL) {
+		    (m = m_pullup(m, sizeof(struct ip))) == NULL) {
 			DPRINTF(("%s: processing failed for SA %s/%08lx\n",
 			    __func__, ipsec_address(&sav->sah->saidx.dst,
 			    buf, sizeof(buf)), (u_long) ntohl(sav->spi)));
@@ -385,7 +385,7 @@ ipsec4_common_input_cb(struct mbuf *m, struct secasvar *sav, int skip,
 		/* enc0: strip outer IPv4 header */
 		m_striphdr(m, 0, ip->ip_hl << 2);
 		if (m->m_len < sizeof(struct ip) &&
-		    (m = m_pullup(m, sizeoof(struct ip))) == NULL) {
+		    (m = m_pullup(m, sizeof(struct ip))) == NULL) {
 			IPSEC_ISTAT(sproto, hdrops);
 			error = EINVAL;
 			goto bad;
