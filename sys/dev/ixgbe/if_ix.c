@@ -1574,7 +1574,7 @@ ixgbe_msix_que(void *arg)
 	IXGBE_TX_LOCK(txr);
 	ixgbe_txeof(txr);
 #ifdef IXGBE_LEGACY_TX
-	if (!IFQ_DRV_IS_EMPTY(ifp->if_snd))
+	if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
 		ixgbe_start_locked(txr, ifp);
 #else
 	if (!drbr_empty(ifp, txr->br))

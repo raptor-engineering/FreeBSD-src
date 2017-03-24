@@ -36,6 +36,9 @@
 #ifndef _IXGBE_H_
 #define _IXGBE_H_
 
+#ifdef ALTQ
+#define	IXGBE_LEGACY_TX
+#endif
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -375,7 +378,7 @@ struct tx_ring {
 	u32			txd_cmd;
 	bus_dma_tag_t		txtag;
 	char			mtx_name[16];
-#ifndef IXGBE_LEGACY_TX
+#ifdef IXGBE_LEGACY_TX
 	struct buf_ring		*br;
 	struct task		txq_task;
 #endif

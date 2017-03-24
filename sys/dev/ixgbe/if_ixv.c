@@ -472,8 +472,10 @@ ixv_detach(device_t dev)
 
 	for (int i = 0; i < adapter->num_queues; i++, que++) {
 		if (que->tq) {
+#ifndef IXGBE_LEGACY_TX
 			struct tx_ring  *txr = que->txr;
 			taskqueue_drain(que->tq, &txr->txq_task);
+#endif
 			taskqueue_drain(que->tq, &que->que_task);
 			taskqueue_free(que->tq);
 		}
@@ -816,7 +818,7 @@ ixv_handle_que(void *context, int pending)
 		more = ixgbe_rxeof(que);
 		IXGBE_TX_LOCK(txr);
 		ixgbe_txeof(txr);
-#if __FreeBSD_version >= 800000
+#if __FreeBSD_version >= 800000 && !defined(IXGBE_LEGACY_TX)
 		if (!drbr_empty(ifp, txr->br))
 			ixgbe_mq_start_locked(ifp, txr);
 #else
@@ -1304,7 +1306,9 @@ ixv_allocate_msix(struct adapter *adapter)
 		*/
 		if (adapter->num_queues > 1)
 			bus_bind_intr(dev, que->res, i);
+#ifndef IXGBE_LEGACY_TX
 		TASK_INIT(&txr->txq_task, 0, ixgbe_deferred_mq_start, txr);
+#endif
 		TASK_INIT(&que->que_task, 0, ixv_handle_que, que);
 		que->tq = taskqueue_create_fast("ixv_que", M_NOWAIT,
 		    taskqueue_thread_enqueue, &que->tq);
@@ -1531,7 +1535,7 @@ ixv_setup_interface(device_t dev, struct adapter *adapter)
 	ifp->if_softc = adapter;
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
 	ifp->if_ioctl = ixv_ioctl;
-#if __FreeBSD_version >= 800000
+#if __FreeBSD_version >= 800000 && !defined(IXGBE_LEGACY_TX)
 	ifp->if_transmit = ixgbe_mq_start;
 	ifp->if_qflush = ixgbe_qflush;
 #else
