@@ -374,7 +374,7 @@ struct tx_ring {
 	u32			txd_cmd;
 	bus_dma_tag_t		txtag;
 	char			mtx_name[16];
-#ifdef IXGBE_LEGACY_TX
+#ifndef IXGBE_LEGACY_TX
 	struct buf_ring		*br;
 	struct task		txq_task;
 #endif
