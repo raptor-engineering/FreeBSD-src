@@ -121,7 +121,7 @@ static int      ixgbe_ioctl(struct ifnet *, u_long, caddr_t);
 static void	ixgbe_init(void *);
 static void	ixgbe_init_locked(struct adapter *);
 static void     ixgbe_stop(void *);
-#if __FreeBSD_version >= 1100036
+#if __FreeBSD_version >= 1100036 && !defined(IXGBE_LEGACY_TX)
 static uint64_t	ixgbe_get_counter(struct ifnet *, ift_counter);
 #endif
 static void	ixgbe_add_media_types(struct adapter *);
@@ -2829,7 +2829,7 @@ ixgbe_setup_interface(device_t dev, struct adapter *adapter)
 	ifp->if_softc = adapter;
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
 	ifp->if_ioctl = ixgbe_ioctl;
-#if __FreeBSD_version >= 1100036
+#if __FreeBSD_version >= 1100036 && !defined(IXGBE_LEGACY_TX)
 	if_setgetcounterfn(ifp, ixgbe_get_counter);
 #endif
 #if __FreeBSD_version >= 1100045
@@ -4155,7 +4155,7 @@ ixgbe_update_stats_counters(struct adapter *adapter)
 	    + adapter->stats.pf.rlec);
 }
 
-#if __FreeBSD_version >= 1100036
+#if __FreeBSD_version >= 1100036 && !defined(IXGBE_LEGACY_TX)
 static uint64_t
 ixgbe_get_counter(struct ifnet *ifp, ift_counter cnt)
 {
@@ -4481,9 +4481,11 @@ ixgbe_add_hw_stats(struct adapter *adapter)
 		SYSCTL_ADD_UQUAD(ctx, queue_list, OID_AUTO, "tx_packets",
 				CTLFLAG_RD, &txr->total_packets,
 				"Queue Packets Transmitted");
+#ifndef IXGBE_LEGACY_TX
 		SYSCTL_ADD_UQUAD(ctx, queue_list, OID_AUTO, "br_drops",
 				CTLFLAG_RD, &txr->br->br_drops,
 				"Packets dropped in buf_ring");
+#endif
 	}
 
 	for (int i = 0; i < adapter->num_queues; i++, rxr++) {

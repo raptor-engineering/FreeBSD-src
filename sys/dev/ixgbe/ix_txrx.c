@@ -698,7 +698,7 @@ ixgbe_free_transmit_buffers(struct tx_ring *txr)
 			tx_buffer->map = NULL;
 		}
 	}
-#ifdef IXGBE_LEGACY_TX
+#ifndef IXGBE_LEGACY_TX
 	if (txr->br != NULL)
 		buf_ring_free(txr->br, M_DEVBUF);
 #endif
