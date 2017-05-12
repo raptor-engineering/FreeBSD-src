@@ -61,10 +61,10 @@ __FBSDID("$FreeBSD$");
 #define OMAP3_ID_CODE              0xA204
 
 static uint32_t chip_revision = 0xffffffff;
-static char ti_cpu_model[128];
+static char ti_soc_model[128];
 
-SYSCTL_STRING(_hw, OID_AUTO, ti_model, CTLFLAG_RD | CTLFLAG_MPSAFE,
-    ti_cpu_model, 0, "Ti SoC model");
+SYSCTL_STRING(_hw, OID_AUTO, ti_soc_model, CTLFLAG_RD | CTLFLAG_MPSAFE,
+    ti_soc_model, 0, "TI SoC model");
 
 /**
  *	ti_revision - Returns the revision number of the device
@@ -235,11 +235,11 @@ am335x_get_revision(void)
 			cpu_last_char='x';
 	}
 
-	memset(ti_cpu_model, 0, sizeof(ti_cpu_model));
-	snprintf(ti_cpu_model, sizeof(ti_cpu_model) - 1,
+	memset(ti_soc_model, 0, sizeof(ti_soc_model));
+	snprintf(ti_soc_model, sizeof(ti_soc_model) - 1,
 	    "Texas Instruments AM335%c Processor, Revision ES1.%u",
 		cpu_last_char, AM335X_DEVREV(chip_revision));
-	printf("%s\n", ti_cpu_model);
+	printf("%s\n", ti_soc_model);
 }
 
 /**
